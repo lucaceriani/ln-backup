@@ -1,4 +1,4 @@
-const Rsync = require('rsync');
+const Rsync = require('./rsync'); // da npm rsync modificato lo spawn con 'inherit' come stdio
 const inquirer = require('inquirer');
 const homedir = require('os').homedir();
 const path = require('path');
@@ -68,7 +68,7 @@ async function doRsync(task) {
             .set('info', 'progress2')
             .source(source)
             .destination(destination)
-            .output((data) => console.log(data.toString()))
+            // .output((data) => console.log(data.toString()))
             ;
 
 
