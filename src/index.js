@@ -3,9 +3,9 @@ const inquirer = require('inquirer');
 const homedir = require('os').homedir();
 const path = require('path');
 const readline = require('readline-sync');
+const tmpdir = require('os').tmpdir();
 
 const config = require('./config');
-const { read } = require('fs');
 
 async function main() {
     let cfg = await config.parse().catch((err) => { console.log(err); });
@@ -61,7 +61,7 @@ async function doRsync(task) {
 
 
         let rs = new Rsync()
-            .executable(__dirname + "/rsync/rsync.exe")
+            .executable(tmpdir + "/luca-backup/rsync.exe")
             // .progress()
             // .flags('a')
             .flags('rlth')
@@ -71,30 +71,31 @@ async function doRsync(task) {
             .output((data) => console.log(data.toString()))
             ;
 
+
         let rsyncPid;
-        /*
-                var quitting = function () {
-                    if (rsyncPid) {
-                        rsyncPid.kill();
-                    }
-                    process.exit();
-                }
-                process.on("SIGINT", quitting); // run signal handler on CTRL-C
-                process.on("SIGTERM", quitting); // run signal handler on SIGTERM
-                process.on("exit", quitting); // run signal handler when main process exits
-        */
+
+        var quitting = function () {
+            if (rsyncPid) {
+                rsyncPid.kill();
+            }
+            process.exit();
+        }
+        process.on("SIGINT", quitting); // run signal handler on CTRL-C
+        process.on("SIGTERM", quitting); // run signal handler on SIGTERM
+        process.on("exit", quitting); // run signal handler when main process exits
+
         await new Promise((resolve, reject) => {
             rsyncPid = rs.execute(
                 function (error, code, cmd) {
                     if (error) {
-                        console.log(error);
                         console.log("Errore rsync n: " + code);
-                        console.log(cmd);
                         resolve();
                     } else {
                         console.log("OK");
                         resolve();
                     }
+
+                    rsyncPid = null;
                 })
 
 
@@ -105,7 +106,15 @@ async function doRsync(task) {
 
 
 (async function () {
-    await main();
+    console.log("Luca Backup - v 1.0.0");
+    console.log("---------------------");
+    console.log("");
+    try {
+        await main();
+    } catch (err) {
+        console.log(err);
+        console.log("Errore imprevisto!");
+    }
     readline.question("\nPremi INVIO per uscire ");
 }
 )();

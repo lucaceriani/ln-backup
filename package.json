@@ -8,13 +8,8 @@
   "scripts": {
     "start": "node src/index.js"
   },
-  "bin": "src/index.js",
-  "pkg": {
-    "assets": [
-      "src/rsync/**/*"
-    ]
-  },
   "dependencies": {
+    "fs-extra": "^9.1.0",
     "inquirer": "^7.3.3",
     "line-reader": "^0.4.0",
     "readline-sync": "^1.4.10",

@@ -1,12 +1,31 @@
 const lineReader = require('line-reader');
 const path = require('path');
 const homedir = require('os').homedir();
-const fs = require("fs");
+const tmpdir = require('os').tmpdir();
+const fs = require("fs-extra");
 
 let a = [];
 let currSet = {}
 
 async function parse() {
+
+
+    // let a = fs.readFileSync(path.join(__dirname, "/rsync/rsync.exe"));
+    // console.log(a);
+
+    // fs.readdir(path.join(__dirname, "/rsync"), (err, files) => {
+    //     files.forEach(file => {
+    //     });
+    // });
+
+    try {
+        fs.copySync(path.join(__dirname, "/rsync"), path.join(tmpdir, "/luca-backup"));
+        console.log("rsync pronto!\n\n");
+    } catch (err) {
+        console.error(err)
+        return Promise.reject("Errore nella copia dei file temporanei!");
+    }
+
 
     let file = homedir + '/luca-backup.txt';
     file = path.normalize(file);
