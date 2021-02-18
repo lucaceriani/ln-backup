@@ -1,0 +1,23 @@
+{
+  "name": "node-backup",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "repository": "https://github.com/lucaceriani/node-backup.git",
+  "author": "Luca Ceriani",
+  "license": "MIT",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "bin": "src/index.js",
+  "pkg": {
+    "assets": [
+      "src/rsync/**/*"
+    ]
+  },
+  "dependencies": {
+    "inquirer": "^7.3.3",
+    "line-reader": "^0.4.0",
+    "readline-sync": "^1.4.10",
+    "rsync": "^0.6.1"
+  }
+}
