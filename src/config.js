@@ -1,31 +1,13 @@
 const lineReader = require('line-reader');
 const path = require('path');
 const homedir = require('os').homedir();
-const tmpdir = require('os').tmpdir();
 const fs = require("fs-extra");
 
-let a = [];
-let currSet = {}
+let tasks = [];
+let currTask = {}
+let currLineN = 0;
 
 async function parse() {
-
-
-    // let a = fs.readFileSync(path.join(__dirname, "/rsync/rsync.exe"));
-    // console.log(a);
-
-    // fs.readdir(path.join(__dirname, "/rsync"), (err, files) => {
-    //     files.forEach(file => {
-    //     });
-    // });
-
-    try {
-        fs.copySync(path.join(__dirname, "/rsync"), path.join(tmpdir, "/luca-backup"));
-        console.log("rsync pronto!\n\n");
-    } catch (err) {
-        console.error(err)
-        return Promise.reject("Errore nella copia dei file temporanei!");
-    }
-
 
     let file = homedir + '/luca-backup.txt';
     file = path.normalize(file);
@@ -36,49 +18,57 @@ async function parse() {
 
 
     return new Promise((resolve, reject) => {
-        lineReader.eachLine(file, function (line, last) {
+        lineReader.eachLine(file, function (rawLine, last) {
 
-            let type = line.charAt(0);
+            // aumento il contatore delle righe
+            currLineN++;
 
-            line = line.substring(2).trim();
+            let type = rawLine.charAt(0);
+
+            let line = rawLine.substring(2).trim();
             line = path.normalize(line);
 
             if (type === 'N') {
 
-                currSet.name = line;
+                currTask.name = line;
 
             } else if (type === 'D') {
 
-                currSet.dst = line;
-                a.push(currSet);
+                // sono alla fine di un task e quindi voglio esere
+                // sicuro di avere sia il nome che le sorgenti
+                if (!currTask.name || !currTask.src) {
 
-                // sono alla fine di un task e quindi vogio essere sicuro di 
-                // avere sia il nome che le sorgenti
-                if (!currSet.name || !currSet.src) {
-                    reject();
+                    if (!currTask.name)
+                        reject(`Linea ${currLineN}: Nessun nome per la destinazione: ${line}`);
+                    if (!currTask.src)
+                        reject(`Linea ${currLineN}: Nessuna sorgente per la destinazione: ${line}`);
+
                     return false;
                 }
 
-                currSet = {};
+                currTask.dst = line;
+                tasks.push(currTask);
+                currTask = {};
 
             } else if (type === 'S') {
 
-                if (currSet.src) {
-                    currSet.src.push(line);
+                if (currTask.src) {
+                    currTask.src.push(line);
                 } else {
-                    currSet.src = [line];
+                    currTask.src = [line];
                 }
-            } else if (type === '#' || type.trim() === '') {
+            } else if (type === '#' || rawLine.trim() === '') {
                 // commento, lo ignoro
+                // oppure riga vuota
             } else {
-                reject();
 
-                // interrompo la lettura
+                // si è verificato un errore
+                reject(`Linea ${currLineN}: Comando non riconosciuto: ${rawLine}`);
                 return false;
             }
 
             if (last) {
-                resolve(a);
+                resolve(tasks);
             }
         })
     })

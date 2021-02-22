@@ -1,19 +1,35 @@
 const Rsync = require('./rsync'); // da npm rsync modificato lo spawn con 'inherit' come stdio
 const inquirer = require('inquirer');
-const homedir = require('os').homedir();
 const path = require('path');
 const readline = require('readline-sync');
 const tmpdir = require('os').tmpdir();
 
+const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nexe
+
 const config = require('./config');
 
-async function main() {
-    let cfg = await config.parse().catch((err) => { console.log(err); });
+const rsyncDeployFolder = path.join(tmpdir, "/luca-backup");
+const rsyncDeployExec = path.join(rsyncDeployFolder, "/rsync.exe");
 
-    if (!cfg) {
+async function main() {
+    let cfg = await config.parse().catch((err) => {
         console.log("Errore nel file di configurazione");
+        console.log(err);
+    });
+
+    // se non sono a posto ritono (esco con attesa)
+    if (!cfg) return;
+
+    // copio rsync al suo posto
+    try {
+        deployRsync();
+    } catch (err) {
+        console.error(err);
+        console.log("Errore nella copia di rsync");
         return;
     }
+
+    console.log("File di configurazione letto correttamente!");
 
     let taskToDo = await inquirer
         .prompt([
@@ -31,8 +47,6 @@ async function main() {
 
     taskN = taskToDo.theme; // per estrarlo dall'oggeto di inquirer
 
-    // console.log(taskN);
-
     if (taskN === "Tutti") {
         for (let task of cfg) {
             await doRsync(task);
@@ -40,7 +54,6 @@ async function main() {
     } else {
         await doRsync(cfg[taskN]);
     }
-
 }
 
 async function doRsync(task) {
@@ -59,18 +72,12 @@ async function doRsync(task) {
         console.log("Copio da " + source);
         console.log("       a " + destination);
 
-
         let rs = new Rsync()
-            .executable(tmpdir + "/luca-backup/rsync.exe")
-            // .progress()
-            // .flags('a')
+            .executable(rsyncDeployExec)
             .flags('rlth')
             .set('info', 'progress2')
             .source(source)
-            .destination(destination)
-            // .output((data) => console.log(data.toString()))
-            ;
-
+            .destination(destination);
 
         let rsyncPid;
 
@@ -97,16 +104,19 @@ async function doRsync(task) {
 
                     rsyncPid = null;
                 })
-
-
         });
 
     }
 }
 
+function deployRsync() { // can throw
+    fs.copySync(path.join(__dirname, "/rsync"), rsyncDeployFolder);
+    console.log("rsync pronto!");
+}
+
 
 (async function () {
-    console.log("Luca Backup - v 1.0.0");
+    console.log("Luca Backup - v 1.1.0");
     console.log("---------------------");
     console.log("");
     try {
@@ -115,6 +125,6 @@ async function doRsync(task) {
         console.log(err);
         console.log("Errore imprevisto!");
     }
-    readline.question("\nPremi INVIO per uscire ");
+    readline.question("\nPremi INVIO per uscire\n");
 }
 )();
