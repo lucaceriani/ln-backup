@@ -4,7 +4,7 @@ LN Backup è un software per il **backup incrementale** scritto in Javascript (N
 come wrapper a **rsync**, portato su Windows come [cwRsync](https://itefix.net/cwrsync).
 LN Backup è distribuito come unico file eseguibile grazie a [nexe](https://www.npmjs.com/package/nexe).
 
-### ✔ Scarica il file eseguibile qui: [download](https://github.com/lucaceriani/node-backup/releases/latest)
+### ✔ Scarica il file eseguibile qui: [download](https://github.com/lucaceriani/node-backup/releases/latest/download/LN-Backup.exe)
 
 ---
 
