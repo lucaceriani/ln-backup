@@ -25,7 +25,7 @@ async function main() {
     // se non sono a posto ritono (esco con attesa)
     if (!cfg) return;
 
-    console.log("File di configurazione letto correttamente!");
+    // console.log("File di configurazione letto correttamente!");
 
     // copio rsync al suo posto
     try {
@@ -167,7 +167,7 @@ async function doRsync(task) {
 
 function deployRsync() { // can throw
     fs.copySync(path.join(__dirname, "/rsync"), rsyncDeployFolder);
-    console.log("rsync pronto!");
+    // console.log("rsync pronto!");
 }
 
 

@@ -1,12 +1,13 @@
 {
-  "name": "node-backup",
-  "version": "1.0.0",
+  "name": "ln-backup",
+  "version": "1.2.0",
   "main": "src/index.js",
   "repository": "https://github.com/lucaceriani/node-backup.git",
   "author": "Luca Ceriani",
-  "license": "CC BY-NC 4.0",
+  "license": "CC-BY-NC-4.0",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "build": "nexe src/index.js --resource \"src/rsync/**/*\""
   },
   "dependencies": {
     "drivelist": "^9.2.4",
@@ -14,6 +15,7 @@
     "inquirer": "^7.3.3",
     "jsonpath": "^1.1.0",
     "line-reader": "^0.4.0",
+    "nexe": "^4.0.0-beta.18",
     "pretty-bytes": "^5.6.0",
     "readline-sync": "^1.4.10"
   }
