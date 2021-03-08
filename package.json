@@ -7,7 +7,7 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "start": "node src/index.js",
-    "build": "nexe src/index.js --resource \"src/rsync/**/*\""
+    "build": "nexe src/index.js --resource \"src/rsync/**/*\" -o LN-Backup.exe"
   },
   "dependencies": {
     "drivelist": "^9.2.4",

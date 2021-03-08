@@ -76,7 +76,7 @@ async function doRsync(task) {
         let rawDisks = await drivelist.list();
 
         let disks = rawDisks
-            // filtro quelli che hanno un mountpoint
+            // filtro quelli che hanno un mountpoint e se sono solo USB
             .filter(d => d.mountpoints.length > 0 && (usbOnly ? d.isUSB == true : true))
             .map(d => ({
                 // attenzione! tolgo il backslash finale!
@@ -84,6 +84,7 @@ async function doRsync(task) {
                 size: prettyBytes(d.size, { maximumFractionDigits: 0 }),
                 description: d.description
             }))
+            // ordino alfabeticamente
             .sort((a, b) => a.letter.localeCompare(b.letter))
 
         // console.log(disks);
@@ -104,21 +105,22 @@ async function doRsync(task) {
 
         // lo estraggo da inquirer
         selectedDisk = selectedDisk.disk;
-        console.log(selectedDisk);
+
+        // lo sostituisco nella destinazione
+        destination = destination.replace(/\?(ALL)?:/, selectedDisk);
 
     }
-
-
-    return; // TODO DELETE
-
 
     // per ogni sorgente
     for (let source of task.src) {
 
 
         console.log("Copio da " + source);
-        console.log("       a " + task.dst);
+        console.log("       a " + destination);
 
+        readline.question("Premere INVIO per avviare il backup... ", { hideEchoBack: true, mask: '' });
+
+        // uso i cygdrive
         source = source.replace(/([a-z]):/i, "/cygdrive/$1/");
         destination = destination.replace(/([a-z]):/i, "/cygdrive/$1/");
 
@@ -154,7 +156,7 @@ async function doRsync(task) {
                         console.log("Errore rsync n: " + code);
                         resolve();
                     } else {
-                        console.log("OK");
+                        console.log("Finito!");
                         resolve();
                     }
 
@@ -173,14 +175,14 @@ function deployRsync() { // can throw
 
 (async function () {
     console.log("Luca Node Backup - v 1.2.0");
-    console.log("---------------------");
-    console.log("");
+    console.log("--------------------------\n");
+
     try {
         await main();
     } catch (err) {
         console.log(err);
         console.log("Errore imprevisto!");
     }
-    readline.question("\nPremi INVIO per uscire\n");
+    readline.question("\nPremere INVIO per uscire... ", { hideEchoBack: true, mask: '' });
 }
 )();

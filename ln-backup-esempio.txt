@@ -1,0 +1,6 @@
+# Esempio di file d configurazione
+
+N Foto e Documenti
+S C:\users\luca\documents
+S C:\Users\Luca\pictures
+D ?:\backup

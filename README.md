@@ -1,13 +1,14 @@
 # LN Backup
-LN Backup è un software per il **backup incrementale** scritto in Javascript (Node.js), come wrapper a **rsync**, portato su Windows come [cwRsync](https://itefix.net/cwrsync).
+LN Backup è un software per il **backup incrementale** scritto in Javascript (Node.js),
+come wrapper a **rsync**, portato su Windows come [cwRsync](https://itefix.net/cwrsync).
 LN Backup è distribuito come unico file eseguibile grazie a [nexe](https://www.npmjs.com/package/nexe).
 
 ### Configurazione di base
 Il programma, per funzionare correttamente, necessita, prima di essere avviato, di un file di configurazione.
 
 Il file di confgiurazione **deve trovarsi nella cartella dell'utente**, su Windows anche chiamata *cartella personale*
-(es. `C:\Users\Luca`) e deve chiamarsi `ln-backup.txt`. Un possibile persorso per il file di configurazione potrebbe essere quindi
-`C:\Users\Luca\ln-backup.txt`.
+(es. `C:\Users\Luca`) e deve chiamarsi `ln-backup.txt`. Un possibile persorso per il file di
+configurazione potrebbe essere quindi `C:\Users\Luca\ln-backup.txt`.
 
 All'interno del file, per specificare le varie opzioni, è necessario seguire **alcune regole sintattiche**.
 
@@ -16,7 +17,8 @@ Ogni **azione di backup**, di seguito chiamata **task**, deve avere nell'ordine:
   - una o più sorgenti
   - una destinazione
   
-Queste tre proprietà del task sono indicate con delle lettere maiuscole seguite da uno spazio seguite dal percoso della cartella,
+Queste tre proprietà del task sono indicate con delle lettere maiuscole seguite
+da uno spazio seguite dal percoso della cartella,
 rispettivamente `N` per il nome, `S` per la/le sorgente/i, `D` per la destinazione. 
 
 #### Esempio di file di configurazione `ln-backup.txt`
@@ -33,6 +35,8 @@ D E:\Backup-documenti
 Stabilisce due task:
   - uno con il nome **Backup foto** che ha come sorgente la cartella `C:\Users\Luca\Pictures` e destinazione `E:\backup-foto`
   - un altro con il nome **Backup documenti** che ha due sorgenti e destinazione `E:\Backup-documenti`
+
+È anche possibile **commentare** il proprio file di configurazione usando `#` all'inizio della riga di commento.
 
 ---
 
