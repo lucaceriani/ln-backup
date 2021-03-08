@@ -9,7 +9,7 @@ let currLineN = 0;
 
 async function parse() {
 
-    let file = homedir + '/luca-backup.txt';
+    let file = path.join(homedir, '/ln-backup.txt');
     file = path.normalize(file);
 
     if (!fs.existsSync(file)) {
