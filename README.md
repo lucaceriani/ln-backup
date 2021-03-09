@@ -38,7 +38,7 @@ S D:\Lavoro\Documenti
 D E:\Backup-documenti
 ```
 Stabilisce due task:
-  - uno con il nome **Backup foto** che ha come sorgente la cartella `C:\Users\Luca\Pictures` e destinazione `E:\backup-foto`
+  - uno con il nome **Backup foto** che ha come sorgente la cartella `C:\Users\Luca\Desktop\Foto` e destinazione `E:\backup-foto`
   - un altro con il nome **Backup documenti** che ha due sorgenti e destinazione `E:\Backup-documenti`
 
 È anche possibile **commentare** il proprio file di configurazione usando `#` all'inizio della riga di commento.
