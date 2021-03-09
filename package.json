@@ -1,6 +1,6 @@
 {
   "name": "ln-backup",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "main": "src/index.js",
   "repository": "https://github.com/lucaceriani/node-backup.git",
   "author": "Luca Ceriani",
@@ -10,10 +10,8 @@
     "build": "nexe src/index.js --resource \"src/rsync/**/*\" -o LN-Backup.exe"
   },
   "dependencies": {
-    "drivelist": "^9.2.4",
     "fs-extra": "^9.1.0",
     "inquirer": "^7.3.3",
-    "jsonpath": "^1.1.0",
     "line-reader": "^0.4.0",
     "nexe": "^4.0.0-beta.18",
     "pretty-bytes": "^5.6.0",

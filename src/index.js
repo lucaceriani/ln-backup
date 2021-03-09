@@ -3,13 +3,13 @@ const inquirer = require('inquirer');
 const path = require('path');
 const readline = require('readline-sync');
 const tmpdir = require('os').tmpdir();
-const drivelist = require('drivelist');
-const jp = require("jsonpath");
-const prettyBytes = require('pretty-bytes');
+const listDisks = require("./my-drivelist");
+const { version } = require("../package.json");
 
 const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nexe
 
 const config = require('./config');
+const { exit } = require('process');
 
 const rsyncDeployFolder = path.join(tmpdir, "/ln-backup");
 const rsyncDeployExec = path.join(rsyncDeployFolder, "/rsync.exe");
@@ -68,24 +68,20 @@ async function doRsync(task) {
     // controllo disco variabile (con ? al posto del nome del disco)
     if (destination.startsWith("?")) {
 
-        let usbOnly = true;
-
-        if (destination.startsWith("?ALL")) usbOnly = false;
+        // se non comincia con ?ALL allora è usb only
+        let usbOnly = !destination.startsWith("?ALL")
 
         // prendo lettera e size degli HDD che hanno un mountpoint
-        let rawDisks = await drivelist.list();
+        let listOfDisks = listDisks();
 
-        let disks = rawDisks
+        // se non riesco ad ottenere la lista skippo questo backup
+        if (listOfDisks == null) return;
+
+        let disks = listOfDisks
             // filtro quelli che hanno un mountpoint e se sono solo USB
-            .filter(d => d.mountpoints.length > 0 && (usbOnly ? d.isUSB == true : true))
-            .map(d => ({
-                // attenzione! tolgo il backslash finale!
-                letter: d.mountpoints[0].path.replace("\\", ""),
-                size: prettyBytes(d.size, { maximumFractionDigits: 0 }),
-                description: d.description
-            }))
-            // ordino alfabeticamente
-            .sort((a, b) => a.letter.localeCompare(b.letter))
+            .filter(d => (usbOnly ? d.isUSB == true : true))
+            // ordino alfabeticamente per lettera del disco
+            .sort((a, b) => a.letterColon.localeCompare(b.letterColon))
 
         // console.log(disks);
 
@@ -97,8 +93,8 @@ async function doRsync(task) {
                     name: 'disk',
                     message: `Qual è il disco${usbOnly ? " USB" : ""} di destinaione?`,
                     choices: disks.map(d => ({
-                        name: `${d.letter} (${d.size} - ${d.description})`,
-                        value: d.letter
+                        name: `${d.letterColon} (${d.size}${d.name ? (" - " + d.name) : ""})`,
+                        value: d.letterColon
                     }))
                 }
             ])
@@ -174,7 +170,7 @@ function deployRsync() { // can throw
 
 
 (async function () {
-    console.log("Luca Node Backup - v 1.2.0");
+    console.log("Luca Node Backup - v " + version);
     console.log("--------------------------\n");
 
     try {
