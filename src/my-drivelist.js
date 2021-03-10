@@ -7,7 +7,7 @@ function getCommandOutput(command) {
     return a;
 };
 
-function listDisks() {
+function listDisks(usbOnly = false) {
 
     let commandOutput = getCommandOutput();
 
@@ -41,6 +41,8 @@ function listDisks() {
                 size: prettyBytes(parseInt(la[2]), { maximumFractionDigits: 0 }),
                 name: la[3] ? la[3] : null
             }))
+            // controllo se ho USB only
+            .filter(d => usbOnly ? d.isUSB : true);
 
     } catch (e) {
         console.error(e);
