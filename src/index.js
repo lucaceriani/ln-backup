@@ -8,7 +8,7 @@ const { version } = require("../package.json");
 
 const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nexe
 
-const config = require('./config');
+const parseConfig = require('./config');
 const { exit } = require('process');
 
 const rsyncDeployFolder = path.join(tmpdir, "/ln-backup");
@@ -17,13 +17,13 @@ const rsyncDeployExec = path.join(rsyncDeployFolder, "/rsync.exe");
 async function main() {
 
 
-    let cfg = await config.parse().catch((err) => {
-        console.log("Errore nel file di configurazione");
-        console.log(err);
-    });
+    let cfg = parseConfig();
 
     // se non sono a posto ritono (esco con attesa)
-    if (!cfg) return;
+    if (!cfg) {
+        console.log("Errore nel file di configurazione!");
+        return;
+    }
 
     // console.log("File di configurazione letto correttamente!");
 
@@ -72,16 +72,12 @@ async function doRsync(task) {
         let usbOnly = !destination.startsWith("?ALL")
 
         // prendo lettera e size degli HDD che hanno un mountpoint
-        let listOfDisks = listDisks();
+        let listOfDisks = listDisks(usbOnly);
 
-        // se non riesco ad ottenere la lista skippo questo backup
+        // se non riesco ad ottenere la lista skippo questo task
         if (listOfDisks == null) return;
 
-        let disks = listOfDisks
-            // filtro quelli che hanno un mountpoint e se sono solo USB
-            .filter(d => (usbOnly ? d.isUSB == true : true))
-            // ordino alfabeticamente per lettera del disco
-            .sort((a, b) => a.letterColon.localeCompare(b.letterColon))
+        let disks = listOfDisks.sort((a, b) => a.letterColon.localeCompare(b.letterColon))
 
         // console.log(disks);
 
@@ -114,7 +110,8 @@ async function doRsync(task) {
         console.log("Copio da " + source);
         console.log("       a " + destination);
 
-        readline.question("Premere INVIO per avviare il backup... ", { hideEchoBack: true, mask: '' });
+        console.log("Il backup sta per iniziare... (premi CTRL+C per annullare)");
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
         // uso i cygdrive
         source = source.replace(/([a-z]):/i, "/cygdrive/$1/");

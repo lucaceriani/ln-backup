@@ -1,79 +1,120 @@
-const lineReader = require('line-reader');
 const path = require('path');
 const homedir = require('os').homedir();
 const fs = require("fs-extra");
 
-let tasks = [];
-let currTask = {}
-let currLineN = 0;
 
-async function parse() {
 
-    let file = path.join(homedir, '/ln-backup.txt');
-    file = path.normalize(file);
+/*
+    il formato JSON finale:
+    tasks = [
+        {
+            name: ...
+            src: [..., ...}
+            dst: ...
+        },
+        ...
+    ]
+*/
 
-    if (!fs.existsSync(file)) {
-        return Promise.reject(`Il file di configurazione ${file} non esiste.`);
+function parseConfig() {
+
+    const configFile = path.join(homedir, 'ln-backup.txt');
+
+    if (!fs.existsSync(configFile)) {
+        console.log(`Il file di configurazione ${configFile} non esiste.`);
+        return null;
     }
 
+    const rawFile = fs.readFileSync(configFile);
 
-    return new Promise((resolve, reject) => {
-        lineReader.eachLine(file, function (rawLine, last) {
+    // controllo il file
+    if (!rawFile) {
+        console.log("Errore nella lettura del file di configurazione!");
+        return null;
+    }
 
-            // aumento il contatore delle righe
-            currLineN++;
+    // splitto e trimmo
+    const lines = rawFile
+        .toString() // è un buffer
+        .split(/\r?\n/) // splitto per righe
+        .map(l => l.trim()) // trimmo
 
-            let type = rawLine.charAt(0);
+    let tasks = [];
+    let currTask = {}
 
-            let line = rawLine.substring(2).trim();
+    // per ogni riga
+    for ([lineN, line] of lines.entries()) {
+
+        // in base 1
+        lineN++;
+
+        // la lettera del comando
+        const type = line.charAt(0);
+
+        // la linea senza i primi due caratteri (lettera comando + spazio)
+        line = line.substring(2).trim();
+
+        if (type === "N") {
+
+            // se ho già un nome è un errore
+            if (currTask.name) {
+                console.log(`Linea ${lineN}: Nome gia' presente per il task: ${line}`);
+                return null;
+            }
+
+            currTask.name = line;
+
+        } else if (type === "D") {
+
+            // sono alla fine di un task e quindi voglio esere
+            // sicuro di avere sia il nome che le sorgenti
+            if (!currTask.name || !currTask.src) {
+
+                if (!currTask.name) {
+                    console.log(`Linea ${lineN}: Nessun nome per la destinazione: ${line}`);
+                    return null;
+                } else if (!currTask.src) {
+                    console.log(`Linea ${lineN}: Nessuna sorgente per la destinazione: ${line}`);
+                    return null;
+                }
+            }
+
             line = path.normalize(line);
 
-            if (type === 'N') {
+            currTask.dst = line;
 
-                currTask.name = line;
+            // sono alla fine di un task quindi lo aggiungo
+            tasks.push(currTask);
 
-            } else if (type === 'D') {
+            // mi preparo per un altro task
+            currTask = {};
 
-                // sono alla fine di un task e quindi voglio esere
-                // sicuro di avere sia il nome che le sorgenti
-                if (!currTask.name || !currTask.src) {
+        } else if (type === "S") {
 
-                    if (!currTask.name)
-                        reject(`Linea ${currLineN}: Nessun nome per la destinazione: ${line}`);
-                    if (!currTask.src)
-                        reject(`Linea ${currLineN}: Nessuna sorgente per la destinazione: ${line}`);
-
-                    return false;
-                }
-
-                currTask.dst = line;
-                tasks.push(currTask);
-                currTask = {};
-
-            } else if (type === 'S') {
-
-                if (currTask.src) {
-                    currTask.src.push(line);
-                } else {
-                    currTask.src = [line];
-                }
-            } else if (type === '#' || rawLine.trim() === '') {
-                // commento, lo ignoro
-                // oppure riga vuota
-            } else {
-
-                // si è verificato un errore
-                reject(`Linea ${currLineN}: Comando non riconosciuto: ${rawLine}`);
-                return false;
+            // sono ad un tipo sorgente vuol dire che devo avere il nome
+            if (!currTask.name) {
+                console.log(`Linea ${lineN}: Nessun nome per la destinazione: ${line}`);
+                return null;
             }
 
-            if (last) {
-                resolve(tasks);
-            }
-        })
-    })
+            line = path.normalize(line);
+            // pusho oppure assegno
+            currTask.src = [...(currTask.src || []), line]
+
+        } else if (type === "#" || line.trim() === "") {
+            // commento, lo ignoro
+            // oppure riga vuota
+        } else {
+
+            // si è verificato un errore
+            console.log(`Linea ${lineN}: Comando non riconosciuto: ${type} ${line}`);
+            return null;
+        }
+
+
+    } // end for sulle linee
+
+    return tasks;
 }
 
-module.exports = {
-    parse
-}
+module.exports = parseConfig;

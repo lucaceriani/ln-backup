@@ -1,8 +1,8 @@
 {
   "name": "ln-backup",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "main": "src/index.js",
-  "repository": "https://github.com/lucaceriani/node-backup.git",
+  "repository": "https://github.com/lucaceriani/ln-backup.git",
   "author": "Luca Ceriani",
   "license": "CC-BY-NC-4.0",
   "scripts": {
@@ -12,7 +12,6 @@
   "dependencies": {
     "fs-extra": "^9.1.0",
     "inquirer": "^7.3.3",
-    "line-reader": "^0.4.0",
     "nexe": "^4.0.0-beta.18",
     "pretty-bytes": "^5.6.0",
     "readline-sync": "^1.4.10"
