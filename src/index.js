@@ -5,23 +5,25 @@ const readline = require('readline-sync');
 const tmpdir = require('os').tmpdir();
 const listDisks = require("./my-drivelist");
 const { version } = require("../package.json");
-
 const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nexe
 
+const po = require("./pretty-output");
 const parseConfig = require('./config');
-const { exit } = require('process');
+
+
+/////////////////////////////////////////////////////////////////////
+
 
 const rsyncDeployFolder = path.join(tmpdir, "/ln-backup");
 const rsyncDeployExec = path.join(rsyncDeployFolder, "/rsync.exe");
 
 async function main() {
 
-
     let cfg = parseConfig();
 
     // se non sono a posto ritono (esco con attesa)
     if (!cfg) {
-        console.log("Errore nel file di configurazione!");
+        po.err("Errore nel file di configurazione!");
         return;
     }
 
@@ -36,21 +38,22 @@ async function main() {
         return;
     }
 
-    let taskToDo = await inquirer
-        .prompt([
-            {
-                type: 'list',
-                name: 'task',
-                message: 'Quale backup vuoi eseguire?',
-                choices: [
-                    'Tutti',
-                    new inquirer.Separator(),
-                    ...cfg.map((task, idx) => ({ name: task.name, value: idx }))
-                ],
-            }
-        ])
+    let tasksInquirerChoices = cfg.map((task, idx) => ({
+        name: `${task.name}\n${task.src.map(s => "    - " + s).join("\n")}`,
+        value: idx
+    }));
 
-    taskN = taskToDo.task; // per estrarlo dall'oggetto di inquirer
+    let { taskN } = await inquirer
+        .prompt({
+            type: 'list',
+            name: 'taskN',
+            message: 'Quale backup vuoi eseguire?',
+            choices: [
+                'Tutti',
+                new inquirer.Separator(),
+                ...tasksInquirerChoices
+            ],
+        });
 
     if (taskN === "Tutti") {
         for (let task of cfg) {
@@ -77,16 +80,19 @@ async function doRsync(task) {
         // se non riesco ad ottenere la lista skippo questo task
         if (listOfDisks == null) return;
 
+        if (listOfDisks.length == 0) {
+            console.log(`Nessun disco${usbOnly ? " USB" : ""} trovato.`);
+            return;
+        }
+
         let disks = listOfDisks.sort((a, b) => a.letterColon.localeCompare(b.letterColon))
 
-        // console.log(disks);
-
         // allora richiesta del disco
-        let selectedDisk = await inquirer
+        let { selectedDisk } = await inquirer
             .prompt([
                 {
                     type: 'list',
-                    name: 'disk',
+                    name: 'selectedDisk',
                     message: `Qual è il disco${usbOnly ? " USB" : ""} di destinaione?`,
                     choices: disks.map(d => ({
                         name: `${d.letterColon} (${d.size}${d.name ? (" - " + d.name) : ""})`,
@@ -94,9 +100,6 @@ async function doRsync(task) {
                     }))
                 }
             ])
-
-        // lo estraggo da inquirer
-        selectedDisk = selectedDisk.disk;
 
         // lo sostituisco nella destinazione
         destination = destination.replace(/\?(ALL)?:/, selectedDisk);
@@ -111,7 +114,8 @@ async function doRsync(task) {
         console.log("       a " + destination);
 
         console.log("Il backup sta per iniziare... (premi CTRL+C per annullare)");
-        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        await new Promise(resolve => setTimeout(resolve, 4000));
 
         // uso i cygdrive
         source = source.replace(/([a-z]):/i, "/cygdrive/$1/");
@@ -129,6 +133,13 @@ async function doRsync(task) {
             .set('info', 'progress2')
             .source(source)
             .destination(destination);
+
+        // se ho delle esclusioni le faccio adesso
+        if (task.excl) {
+            rs.exclude(task.excl)
+        }
+
+        // return console.log(rs.command());
 
         let rsyncPid;
 
@@ -167,8 +178,14 @@ function deployRsync() { // can throw
 
 
 (async function () {
-    console.log("Luca Node Backup - v " + version);
-    console.log("--------------------------\n");
+    po.tit("LN Backup - v " + version);
+    po.bri(`
+     __   _  __   ___           __           
+    / /  / |/ /  / _ )___ _____/ /____ _____ 
+   / /__/    /  / _  / _ \`/ __/  '_/ // / _ \\
+  /____/_/|_/  /____/\\_,_/\\__/_/\\_\\\\_,_/ .__/   v ${version}
+                                      /_/    
+    `)
 
     try {
         await main();

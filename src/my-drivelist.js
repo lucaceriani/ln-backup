@@ -27,7 +27,7 @@ function listDisks(usbOnly = false) {
 
         drives = commandOutput
             .split("\r\n") // splitto per CRLF
-            .filter((_, i) => i > 0) // cancello la prima riga
+            .slice(1) // cancello la prima riga
             .map(l => l.trim()) // trimmo
             .filter(l => l != "") // tolgo le righe vuote
 
@@ -48,7 +48,7 @@ function listDisks(usbOnly = false) {
         console.error(e);
         console.log("Errore nella parsificazione di wmic:");
         console.log(commandOutput);
-        drives = null;
+        return null;
     }
 
     // console.log(drives);

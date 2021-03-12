@@ -10,10 +10,12 @@ expr       -> comando 			         {% id %}
 commento   -> "#" .:* newline:*          {% d => null %}
 
 comando    -> Name Src:+ Dst             {% ([name, src, dst]) => ({name, src, dst})  %}
+            | Name Src:+ Escl:+ Dst      {% ([name, src, excl, dst]) => ({name, src, excl, dst}) %}
 
-Name       -> "N" _ param newline:+      {% d => d[2]  %}
-Src        -> "S" _ param newline:+      {% d => d[2]  %}
-Dst        -> "D" _ param newline:*      {% d => d[2]  %}
+Name       -> "N" _ param newline:+      {% d => d[2] %}
+Src        -> "S" _ param newline:+      {% d => d[2] %}
+Escl       -> "E" _ param newline:+      {% d => d[2] %}
+Dst        -> "D" _ param newline:*      {% d => d[2] %}
 
 
 param      -> .:+                        {% ([d]) => d.join("") %}
