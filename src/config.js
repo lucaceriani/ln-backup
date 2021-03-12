@@ -1,9 +1,10 @@
 const path = require('path');
 const homedir = require('os').homedir();
 const fs = require("fs-extra");
-
 const nearley = require("nearley");
 const grammar = require("./config-grammar");
+
+const po = require("./pretty-output");
 
 /*
     il formato JSON finale:
@@ -22,7 +23,7 @@ function parseConfig() {
     const configFile = path.join(homedir, 'ln-backup.txt');
 
     if (!fs.existsSync(configFile)) {
-        console.log(`Il file di configurazione ${configFile} non esiste.`);
+        po.err(`Il file di configurazione ${configFile} non esiste.`);
         return null;
     }
 
@@ -30,17 +31,30 @@ function parseConfig() {
 
     // controllo il file
     if (!rawFile) {
-        console.log("Errore nella lettura del file di configurazione!");
+        po.err("Errore nella lettura del file di configurazione!");
         return null;
     }
 
     const parser = new nearley.Parser(nearley.Grammar.fromCompiled(grammar));
 
-    parser.feed(rawFile);
+
+    let parsed;
+
+    try {
+        parser.feed(rawFile);
+        parsed = parser.results[0];
+    } catch (err) {
+        po.err("Errore nella sintassi del file di configurazione:");
+        po.log(err
+            .toString()
+            .split(/\r?\n/)
+            .filter(l => l.match(/(^ *\d+)|( +\^)/))
+            .join("\n")
+        );
+    }
 
 
-
-    return parser.results[0];
+    return
 }
 
 module.exports = parseConfig;

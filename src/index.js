@@ -9,6 +9,7 @@ const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nex
 
 const po = require("./pretty-output");
 const parseConfig = require('./config');
+const { join } = require('path');
 
 
 /////////////////////////////////////////////////////////////////////
@@ -26,8 +27,6 @@ async function main() {
         po.err("Errore nel file di configurazione!");
         return;
     }
-
-    // console.log("File di configurazione letto correttamente!");
 
     // copio rsync al suo posto
     try {
@@ -55,13 +54,11 @@ async function main() {
             ],
         });
 
-    if (taskN === "Tutti") {
-        for (let task of cfg) {
-            await doRsync(task);
-        }
-    } else {
+    if (taskN === "Tutti")
+        for (let task of cfg) await doRsync(task);
+    else
         await doRsync(cfg[taskN]);
-    }
+
 }
 
 async function doRsync(task) {
@@ -107,68 +104,57 @@ async function doRsync(task) {
     }
 
     // per ogni sorgente
-    for (let source of task.src) {
 
 
-        console.log("Copio da " + source);
-        console.log("       a " + destination);
+    console.log("Copio da " + task.src.join(", "));
+    console.log("       a " + destination);
 
-        console.log("Il backup sta per iniziare... (premi CTRL+C per annullare)");
+    console.log("Il backup sta per iniziare... (premi CTRL+C per annullare)");
 
-        await new Promise(resolve => setTimeout(resolve, 4000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
-        // uso i cygdrive
-        source = source.replace(/([a-z]):/i, "/cygdrive/$1/");
-        destination = destination.replace(/([a-z]):/i, "/cygdrive/$1/");
+    // uso i cygdrive
+    let sources = task.src.map(s => s.replace(/([a-z]):/i, "/cygdrive/$1"));
+    destination = destination.replace(/([a-z]):/i, "/cygdrive/$1");
 
-        source = path.normalize(source);
-        destination = path.normalize(destination);
+    // source = path.normalize(source);
+    // destination = path.normalize(destination);
 
-        // console.log("Copio da " + source);
-        // console.log("       a " + destination);
+    // console.log("Copio da " + source);
+    // console.log("       a " + destination);
 
-        let rs = new Rsync()
-            .executable(rsyncDeployExec)
-            .flags('rlth')
-            .set('info', 'progress2')
-            .source(source)
-            .destination(destination);
+    let rs = new Rsync()
+        .executable(rsyncDeployExec)
+        .flags('rlth')
+        .set('info', 'progress2')
+        .source(sources)
+        .destination(destination);
 
-        // se ho delle esclusioni le faccio adesso
-        if (task.excl) {
-            rs.exclude(task.excl)
-        }
+    // se ho delle esclusioni le faccio adesso
+    if (task.excl) rs.exclude(task.excl);
 
-        // return console.log(rs.command());
+    // return console.log(rs.command());
 
-        let rsyncPid;
+    let rsyncPid;
 
-        var quitting = function () {
-            if (rsyncPid) {
-                rsyncPid.kill();
-            }
-            process.exit();
-        }
-        process.on("SIGINT", quitting); // run signal handler on CTRL-C
-        process.on("SIGTERM", quitting); // run signal handler on SIGTERM
-        process.on("exit", quitting); // run signal handler when main process exits
-
-        await new Promise((resolve, reject) => {
-            rsyncPid = rs.execute(
-                function (error, code, cmd) {
-                    if (error) {
-                        console.log("Errore rsync n: " + code);
-                        resolve();
-                    } else {
-                        console.log("Finito!");
-                        resolve();
-                    }
-
-                    rsyncPid = null;
-                })
-        });
-
+    const quitting = () => {
+        if (rsyncPid) rsyncPid.kill();
+        process.exit();
     }
+    process.on("SIGINT", quitting); // run signal handler on CTRL-C
+    process.on("SIGTERM", quitting); // run signal handler on SIGTERM
+    process.on("exit", quitting); // run signal handler when main process exits
+
+    await new Promise(resolve => {
+        rsyncPid = rs.execute(
+            function (error, code, cmd) {
+                if (error) po.red("Errore rsync n: " + code);
+                else po.suc(`Backup "${task.name}" completato!`);
+
+                rsyncPid = null;
+                resolve();
+            })
+    });
 }
 
 function deployRsync() { // can throw
