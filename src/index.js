@@ -46,6 +46,8 @@ async function main() {
         .prompt({
             type: 'list',
             name: 'taskN',
+            loop: false,
+            pageSize: 24,
             message: 'Quale backup vuoi eseguire?',
             choices: [
                 'Tutti',

@@ -51,10 +51,11 @@ function parseConfig() {
             .filter(l => l.match(/(^ *\d+)|( +\^)/))
             .join("\n")
         );
+
+        return null;
     }
 
-
-    return
+    return parsed;
 }
 
 module.exports = parseConfig;
