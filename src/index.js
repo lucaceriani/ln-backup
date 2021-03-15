@@ -113,8 +113,8 @@ async function doRsync(task) {
     await new Promise(resolve => setTimeout(resolve, 4000));
 
     // uso i cygdrive
-    let sources = task.src.map(s => s.replace(/([a-z]):/i, "/cygdrive/$1"));
-    destination = destination.replace(/([a-z]):/i, "/cygdrive/$1");
+    let sources = task.src.map(s => s.replace(/^([a-z]):/i, "/cygdrive/$1"));
+    destination = destination.replace(/^([a-z]):/i, "/cygdrive/$1");
 
     // source = path.normalize(source);
     // destination = path.normalize(destination);
@@ -127,7 +127,8 @@ async function doRsync(task) {
         .flags('rlth')
         .set('info', 'progress2')
         .source(sources)
-        .destination(destination);
+        .destination(destination)
+        ;
 
     // se ho delle esclusioni le faccio adesso
     if (task.excl) rs.exclude(task.excl);

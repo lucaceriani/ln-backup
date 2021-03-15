@@ -1017,16 +1017,22 @@ function escapeShellArg(arg) {
  * @return {String} the escaped version of the filename
  */
 function escapeFileArg(filename) {
-    filename = filename.replace(/(["'`\s\\\(\)\\$])/g, '\\$1');
-    if (!/(\\\\)/.test(filename)) {
-        return filename;
-    }
-    // Under Windows rsync (with cygwin) and OpenSSH for Windows
-    // (http://www.mls-software.com/opensshd.html) are using 
-    // standard linux directory separator so need to replace it
-    if ('win32' === process.platform) {
-        filename = filename.replace(/\\\\/g, '/').replace(/^["]?[A-Z]\:\//ig, '/');
-    }
+    // lucaceriani: modificato così ci aggiungo io le virgolette
+    filename = filename.replace(/(['`\\\(\)\\$])/g, '\\$1');
+
+    filename = filename.replace(/\\\\/g, '/').replace(/^["]?[A-Z]\:\//ig, '/');
+    filename = `"${filename}"`;
+
+    // if (!/(\\\\)/.test(filename)) {
+    //     return filename;
+    // }
+    // // Under Windows rsync (with cygwin) and OpenSSH for Windows
+    // // (http://www.mls-software.com/opensshd.html) are using 
+    // // standard linux directory separator so need to replace it
+
+    // if ('win32' === process.platform) {
+    // }
+
     return filename;
 }
 
