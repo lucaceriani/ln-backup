@@ -6,10 +6,9 @@ const tmpdir = require('os').tmpdir();
 const listDisks = require("./my-drivelist");
 const { version } = require("../package.json");
 const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nexe
-
+const moment = require("moment");
 const po = require("./pretty-output");
 const parseConfig = require('./config');
-const { join } = require('path');
 
 
 /////////////////////////////////////////////////////////////////////
@@ -66,6 +65,7 @@ async function main() {
 async function doRsync(task) {
 
     let destination = task.dst;
+    let winDestination = task.dst;
 
     // controllo disco variabile (con ? al posto del nome del disco)
     if (destination.startsWith("?")) {
@@ -102,11 +102,9 @@ async function doRsync(task) {
 
         // lo sostituisco nella destinazione
         destination = destination.replace(/\?(ALL)?:/, selectedDisk);
+        winDestination = destination;
 
     }
-
-    // per ogni sorgente
-
 
     console.log("Copio da " + task.src.join(", "));
     console.log("       a " + destination);
@@ -148,20 +146,32 @@ async function doRsync(task) {
     process.on("exit", quitting); // run signal handler when main process exits
 
     await new Promise(resolve => {
-        rsyncPid = rs.execute(
-            function (error, code, cmd) {
-                if (error) po.red("Errore rsync n: " + code);
-                else po.suc(`Backup "${task.name}" completato!`);
+        rsyncPid = rs.execute((error, code, cmd) => {
+            if (error) po.red("Errore rsync n: " + code);
+            else {
+                po.suc(`Backup "${task.name}" completato!`);
 
-                rsyncPid = null;
-                resolve();
-            })
+                // uso windestination pechè mi server il path di windows con di cygdrive
+                // non posso usare task.dst perchè potrebbere avere un ? / ?ALL
+                writeDateFile(winDestination, task);
+            }
+            resolve();
+        })
     });
 }
 
 function deployRsync() { // can throw
     fs.copySync(path.join(__dirname, "/rsync"), rsyncDeployFolder);
     // console.log("rsync pronto!");
+}
+
+function writeDateFile(destinazione, task) {
+    let dataOra = moment().format("DD/MM/YYYY [alle] hh:mm");
+    fs.writeFileSync(
+        path.join(destinazione, "LN Bakcup.txt"),
+        `LN Backup v ${version}\n\n[ ${task.name} ]\nUltimo backup eseguito correttamente il ${dataOra}`
+    )
+
 }
 
 
