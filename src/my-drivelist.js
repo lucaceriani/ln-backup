@@ -1,23 +1,25 @@
 const { execSync } = require('child_process');
 const prettyBytes = require('pretty-bytes');
 
-function getCommandOutput(command) {
-    let a = execSync("wmic logicaldisk get deviceid,drivetype,size,volumename").toString();
+function getCommandOutput() {
+    let a = execSync("wmic logicaldisk get deviceid,volumedirty,size,volumename").toString();
     // console.log(a);
     return a;
 };
 
-function listDisks(usbOnly = false) {
+function listDisks() {
 
     let commandOutput = getCommandOutput();
 
     /*
     Esempio di output
 
-    DeviceID  DriveType  Size          VolumeName
-    C:        3          510882312192
-    D:        3          240054734848  Archivio
-    E:        2          8008970240    CCCOMA_X64FRE_IT-IT_DV9
+    [0]       [1]           [2]          [3]
+
+    DeviceID  Size          VolumeDirty  VolumeName  
+    C:        510882312192
+    D:        240054734848               Archivio
+    E:        7854325760    FALSE        LUCA - 8GB
 
     */
 
@@ -25,24 +27,35 @@ function listDisks(usbOnly = false) {
 
     try {
 
-        drives = commandOutput
-            .split("\r\n") // splitto per CRLF
-            .slice(1) // cancello la prima riga
-            .map(l => l.trim()) // trimmo
-            .filter(l => l != "") // tolgo le righe vuote
+        // prendo le larghezze colonna dalla prima riga
+        const cl = commandOutput
+            .split(/\r?\n/)[0]
+            .match(/[^ ]+ */g)
+            .map(s => s.length)
 
-            .map(l => l.replace(/ +/g, " ")) // gli spazi multipli diventano singoli
-            .map(l => l.split(" ")) // separo sugli spazi
-            .filter(la => la[0].match(/^[A-Z]:$/)) // la lettera deve essere giusta
-            .filter(la => la.length >= 3) // deve avere almeno 3 elementi (lettera, tipo e size)
+        drives = commandOutput
+            .split(/\r?\n/) // splitto per CR?LF
+            .map(line => line.trim())
+            .filter(line => line != "")
+            .slice(1) // cancello la prima riga
+            .map(line => [
+                line.slice(0, cl[0]).trim(),
+                line.slice(cl[0], cl[1] + cl[0]).trim(),
+                line.slice(cl[0] + cl[1], cl[2] + cl[1] + cl[0]).trim(),
+                line.slice(cl[2] + cl[1] + cl[0], cl[3] + cl[2] + cl[1] + cl[0]).trim()
+            ])
             .map(la => ({
                 letterColon: la[0],
-                isUSB: la[1] == "2",
-                size: prettyBytes(parseInt(la[2]), { maximumFractionDigits: 0 }),
-                name: la[3] ? la[3] : null
+                size: prettyBytes(parseInt(la[1]), { maximumFractionDigits: 0 }),
+                isUSB: !!la[2].match(/TRUE|FALSE/),
+                name: la[3]
             }))
-            // controllo se ho USB only
-            .filter(d => usbOnly ? d.isUSB : true);
+            .sort((a, b) => a.letterColon.localeCompare(b.letterColon))
+            ;
+
+
+        // console.log(drives);
+
 
     } catch (e) {
         console.error(e);
@@ -55,6 +68,7 @@ function listDisks(usbOnly = false) {
 
     return drives;
 }
+
 
 module.exports = listDisks;
 

@@ -74,17 +74,16 @@ async function doRsync(task) {
         let usbOnly = !destination.startsWith("?ALL")
 
         // prendo lettera e size degli HDD che hanno un mountpoint
-        let listOfDisks = listDisks(usbOnly);
+        let disks = listDisks().filter(disk => usbOnly ? disk.isUSB : true);
+
 
         // se non riesco ad ottenere la lista skippo questo task
-        if (listOfDisks == null) return;
+        if (disks == null) return;
 
-        if (listOfDisks.length == 0) {
+        if (disks.length == 0) {
             console.log(`Nessun disco${usbOnly ? " USB" : ""} trovato.`);
             return;
         }
-
-        let disks = listOfDisks.sort((a, b) => a.letterColon.localeCompare(b.letterColon))
 
         // allora richiesta del disco
         let { selectedDisk } = await inquirer
