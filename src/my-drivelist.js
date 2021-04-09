@@ -20,6 +20,7 @@ function listDisks() {
     C:        510882312192
     D:        240054734848               Archivio
     E:        7854325760    FALSE        LUCA - 8GB
+    F:
 
     */
 
@@ -44,6 +45,7 @@ function listDisks() {
                 line.slice(cl[0] + cl[1], cl[2] + cl[1] + cl[0]).trim(),
                 line.slice(cl[2] + cl[1] + cl[0], cl[3] + cl[2] + cl[1] + cl[0]).trim()
             ])
+            .filter(la => la[1]) // prendo solo quelli che hanno una size definita
             .map(la => ({
                 letterColon: la[0],
                 size: prettyBytes(parseInt(la[1]), { maximumFractionDigits: 0 }),
