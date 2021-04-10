@@ -1,4 +1,5 @@
 const ck = require("chalk");
+const readline = require('readline-sync');
 
 const cl = console.log;
 
@@ -9,4 +10,6 @@ module.exports = {
     suc: s => cl(ck.bold.green(s)),
     log: s => cl(s),
     tit: s => process.title = s,
+    key: s => readline.question(s, { hideEchoBack: true, mask: '' }),
+    cls: () => console.clear(),
 }

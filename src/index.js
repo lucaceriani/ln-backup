@@ -1,30 +1,41 @@
-const Rsync = require('./rsync'); // da npm rsync modificato lo spawn con 'inherit' come stdio
-const inquirer = require('inquirer');
-const path = require('path');
-const readline = require('readline-sync');
-const tmpdir = require('os').tmpdir();
+const Rsync = require("./rsync"); // da npm rsync modificato lo spawn con "inherit" come stdio
+const inquirer = require("inquirer");
+const path = require("path");
+const tmpdir = require("os").tmpdir();
 const listDisks = require("./my-drivelist");
 const { version } = require("../package.json");
 const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nexe
 const moment = require("moment");
 const po = require("./pretty-output");
-const parseConfig = require('./config');
+const parseConfig = require("./config");
+const commandLineArgs = require("command-line-args")
 
+const optionDefinitions = [
+    { name: "backup", alias: "b", type: String },
+    { name: "disco", alias: "d", type: String, },
+    { name: "prova", alias: "p", type: Boolean, },
+]
 
 /////////////////////////////////////////////////////////////////////
 
 
 const rsyncDeployFolder = path.join(tmpdir, "/ln-backup");
 const rsyncDeployExec = path.join(rsyncDeployFolder, "/rsync.exe");
+let options;
 
-async function main() {
+async function menu() {
+
+    try {
+        options = commandLineArgs(optionDefinitions)
+    } catch (e) {
+        throw ("Errore nei parametri\nOpzione sconoscuta: " + e.optionName)
+    }
 
     let cfg = parseConfig();
 
     // se non sono a posto ritono (esco con attesa)
     if (!cfg) {
-        po.err("Errore nel file di configurazione!");
-        return;
+        throw "Errore nel file di configurazione!";
     }
 
     // copio rsync al suo posto
@@ -32,33 +43,46 @@ async function main() {
         deployRsync();
     } catch (err) {
         console.error(err);
-        console.log("Errore nella copia di rsync nella cartella: " + rsyncDeployFolder);
-        return;
+        throw "Errore nella copia di rsync nella cartella: " + rsyncDeployFolder;
     }
 
-    let tasksInquirerChoices = cfg.map((task, idx) => ({
-        name: `${task.name}\n${task.src.map(s => "    - " + s).join("\n")}`,
-        value: idx
-    }));
 
-    let { taskN } = await inquirer
-        .prompt({
-            type: 'list',
-            name: 'taskN',
-            loop: false,
-            pageSize: 24,
-            message: 'Quale backup vuoi eseguire?',
-            choices: [
-                'Tutti',
-                new inquirer.Separator(),
-                ...tasksInquirerChoices
-            ],
-        });
+    let taskIdx;
 
-    if (taskN === "Tutti")
+    if (options.backup) {
+        taskIdx = cfg.findIndex(task => task.name.toLowerCase() == options.backup.toLowerCase())
+        if (taskIdx == -1) throw `Impossible trovare il task "${options.backup}"`;
+
+        po.suc(`Task "${cfg[taskIdx].name}" trovato!`);
+
+    } else {
+
+        let tasksInquirerChoices = cfg.map((task, idx) => ({
+            name: `${task.name}\n${task.src.map(s => "    - " + s).join("\n")}`,
+            value: idx
+        }));
+
+        let inq = await inquirer
+            .prompt({
+                type: "list",
+                name: "taskN",
+                loop: false,
+                pageSize: 50,
+                message: "Quale backup vuoi eseguire?",
+                choices: [
+                    "Tutti",
+                    new inquirer.Separator(),
+                    ...tasksInquirerChoices
+                ],
+            });
+
+        taskIdx = inq.taskN;
+    }
+
+    if (taskIdx === "Tutti")
         for (let task of cfg) await doRsync(task);
     else
-        await doRsync(cfg[taskN]);
+        await doRsync(cfg[taskIdx]);
 
 }
 
@@ -73,34 +97,22 @@ async function doRsync(task) {
         // se non comincia con ?ALL allora è usb only
         let usbOnly = !destination.startsWith("?ALL")
 
-        // prendo lettera e size degli HDD che hanno un mountpoint
-        let disks = listDisks().filter(disk => usbOnly ? disk.isUSB : true);
-
-
-        // se non riesco ad ottenere la lista skippo questo task
-        if (disks == null) return;
-
-        if (disks.length == 0) {
-            console.log(`Nessun disco${usbOnly ? " USB" : ""} trovato.`);
-            return;
+        if (options.disco) {
+            // aggiungo i duepunti se non ci sono
+            if (!options.disco.includes(":")) options.disco += ":"
+            selectedDisk = options.disco
+        } else {
+            selectedDisk = await askForDrive(usbOnly);
         }
 
-        // allora richiesta del disco
-        let { selectedDisk } = await inquirer
-            .prompt([
-                {
-                    type: 'list',
-                    name: 'selectedDisk',
-                    message: `Qual è il disco${usbOnly ? " USB" : ""} di destinaione?`,
-                    choices: disks.map(d => ({
-                        name: `${d.letterColon} (${d.size}${d.name ? (" - " + d.name) : ""})`,
-                        value: d.letterColon
-                    }))
-                }
-            ])
+        // skippo il task se non trovo nessun disco valido
+        if (!selectedDisk) return;
+
 
         // lo sostituisco nella destinazione
         destination = destination.replace(/\?(ALL)?:/, selectedDisk);
+
+        // mi salvo la destinazione come path di windows di windows
         winDestination = destination;
 
         // a questo punto ho la destinazione definitiva come path di windows
@@ -112,15 +124,16 @@ async function doRsync(task) {
         }
     }
 
-    console.log("Copio da " + task.src.join(", "));
-    console.log("       a " + destination);
-
-    console.log("Il backup sta per iniziare... (premi CTRL+C per annullare)");
+    po.log("");
+    po.log("Copio da " + task.src.join(", "));
+    po.log("       a " + destination);
+    po.log("");
+    po.log("Il backup sta per iniziare... (premi CTRL+C per annullare)");
 
     await new Promise(resolve => setTimeout(resolve, 4000));
 
     // uso i cygdrive
-    let sources = task.src.map(s => s.replace(/^([a-z]):/i, "/cygdrive/$1"));
+    let source = task.src.map(s => s.replace(/^([a-z]):/i, "/cygdrive/$1"));
     destination = destination.replace(/^([a-z]):/i, "/cygdrive/$1");
 
     // source = path.normalize(source);
@@ -131,16 +144,19 @@ async function doRsync(task) {
 
     let rs = new Rsync()
         .executable(rsyncDeployExec)
-        .flags('rlth')
-        .set('info', 'progress2')
-        .source(sources)
+        .flags("rlth")
+        .set("info", "progress2")
+        .source(source)
         .destination(destination)
         ;
 
     // se ho delle esclusioni le faccio adesso
     if (task.excl) rs.exclude(task.excl);
 
-    // return console.log(rs.command());
+    // se ho passato il parametro prova non eseguo niente
+    // mostro solo il comando
+    if (options.prova) return console.log(rs.command());
+
 
     let rsyncPid;
 
@@ -167,37 +183,74 @@ async function doRsync(task) {
     });
 }
 
+async function askForDrive(usbOnly) {
+    // prendo lettera e size degli HDD che hanno un mountpoint
+    let disks = listDisks().filter(disk => usbOnly ? disk.isUSB : true);
+
+
+    // se non riesco ad ottenere la lista skippo questo task
+    if (disks == null) throw "Impossibile ottenere la lista dei dischi";
+
+    if (disks.length == 0) {
+        console.log(`Nessun disco${usbOnly ? " USB" : ""} trovato.`);
+        return null;
+    }
+
+    // allora richiesta del disco
+    let { selectedDisk } = await inquirer
+        .prompt([
+            {
+                type: "list",
+                name: "selectedDisk",
+                message: `Qual è il disco${usbOnly ? " USB" : ""} di destinaione?`,
+                choices: disks.map(d => ({
+                    name: `${d.letterColon} (${d.size}${d.name ? (" - " + d.name) : ""})`,
+                    value: d.letterColon
+                }))
+            }
+        ])
+
+    return selectedDisk;
+}
+
 function deployRsync() { // can throw
     fs.copySync(path.join(__dirname, "/rsync"), rsyncDeployFolder);
     // console.log("rsync pronto!");
 }
 
 function writeDateFile(destinazione, task) {
-    let dataOra = moment().format("DD/MM/YYYY [alle] hh:mm");
+    let dataOra = moment().format("DD/MM/YYYY [alle] HH:mm");
     fs.writeFileSync(
-        path.join(destinazione, "LN Bakcup.txt"),
+        path.join(destinazione, "LN Backup.txt"),
         `LN Backup v ${version}\n\n[ ${task.name} ]\nUltimo backup eseguito correttamente il ${dataOra}`
     )
-
 }
 
 
-(async function () {
+async function main() {
+    po.cls();
     po.tit("LN Backup - v " + version);
     po.bri(`
      __   _  __   ___           __           
     / /  / |/ /  / _ )___ _____/ /____ _____ 
-   / /__/    /  / _  / _ \`/ __/  '_/ // / _ \\
+   / /__/    /  / _  / _ \`/ __/  "_/ // / _ \\
   /____/_/|_/  /____/\\_,_/\\__/_/\\_\\\\_,_/ .__/   v ${version}
                                       /_/    
     `)
 
     try {
-        await main();
+        await menu();
     } catch (err) {
-        console.log(err);
-        console.log("Errore imprevisto!");
+        po.err(err);
+        po.err("Errore imprevisto!");
+        po.key("\nPremere INVIO per uscire... ");
+        return;
     }
-    readline.question("\nPremere INVIO per uscire... ", { hideEchoBack: true, mask: '' });
+
+    po.key("\nPremere INVIO per tornare al menu principale...")
+    main();
 }
-)();
+
+// inizia
+main();
+
