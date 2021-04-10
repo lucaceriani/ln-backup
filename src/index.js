@@ -8,14 +8,46 @@ const fs = require("fs-extra"); // per copiare tutta la cartella virtuale di nex
 const moment = require("moment");
 const po = require("./pretty-output");
 const parseConfig = require("./config");
+
 const commandLineArgs = require("command-line-args")
+const commandLineUsage = require('command-line-usage')
 
 const optionDefinitions = [
-    { name: "backup", alias: "b", type: String },
-    { name: "disco", alias: "d", type: String, },
-    { name: "prova", alias: "p", type: Boolean, },
+    {
+        name: "backup",
+        alias: "b",
+        type: String,
+        description: "Il nome del task di backup da eseguire",
+        typeLabel: "{underline \"nome task\"}"
+    },
+    {
+        name: "disco",
+        alias: "d",
+        type: String,
+        description: "Il disco da utilizzare (con o senza i due punti) con la sinstassi ?: oppure ?ALL:",
+        typeLabel: "{underline disco}"
+
+    },
+    {
+        name: "prova",
+        alias: "p",
+        type: Boolean,
+        description: "Non effettua nessun backup, mostra invece il comando di rsync"
+    },
+    {
+        name: "help",
+        alias: "h",
+        type: Boolean,
+        description: "Mostra questa guida"
+    },
 ]
 
+const helpMenu = [
+    {
+        header: "Opzioni",
+        optionList: optionDefinitions
+    }
+]
 /////////////////////////////////////////////////////////////////////
 
 
@@ -29,6 +61,11 @@ async function menu() {
         options = commandLineArgs(optionDefinitions)
     } catch (e) {
         throw ("Errore nei parametri\nOpzione sconoscuta: " + e.optionName)
+    }
+
+    if (options.help) {
+        po.log(commandLineUsage(helpMenu))
+        return "esci"
     }
 
     let cfg = parseConfig();
@@ -239,7 +276,11 @@ async function main() {
     `)
 
     try {
-        await menu();
+        let res = await menu();
+        if (res == "esci") {
+            po.key("\nPremere INVIO per uscire... ");
+            return;
+        }
     } catch (err) {
         po.err(err);
         po.err("Errore imprevisto!");
