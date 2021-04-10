@@ -103,6 +103,13 @@ async function doRsync(task) {
         destination = destination.replace(/\?(ALL)?:/, selectedDisk);
         winDestination = destination;
 
+        // a questo punto ho la destinazione definitiva come path di windows
+        // creo le cartelle che mancano per non dare errore a rsync
+        if (!fs.existsSync(winDestination)) {
+            fs.mkdirSync(winDestination, {
+                recursive: true
+            });
+        }
     }
 
     console.log("Copio da " + task.src.join(", "));
